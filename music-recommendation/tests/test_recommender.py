@@ -72,6 +72,21 @@ class RecommenderTests(unittest.TestCase):
             scores = [item["score"] for item in results]
             self.assertEqual(scores, sorted(scores, reverse=True))
 
+    def test_svd_and_knn_cold_start_use_popularity_fallback(self):
+        for strategy in ("svd", "knn"):
+            results = self.model.recommend("new-account", limit=3, strategy=strategy)
+            self.assertGreater(len(results), 0)
+            self.assertTrue(all(item["method"] == "popularity-fallback" for item in results))
+
+    def test_empty_metadata_catalogue_does_not_crash(self):
+        catalogue = pd.DataFrame([
+            {"track_id": "x", "title": "", "artist": ""},
+            {"track_id": "y", "title": "", "artist": ""},
+        ])
+        model = HybridMusicRecommender(catalogue, pd.DataFrame())
+        self.assertEqual(model.diagnostics()["tracks"], 2)
+        self.assertEqual(len(model.similar_tracks("x")), 1)
+
     def test_unknown_strategy_is_rejected(self):
         with self.assertRaises(ValueError):
             self.model.recommend("u1", strategy="not-a-model")
