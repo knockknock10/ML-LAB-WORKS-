@@ -334,3 +334,33 @@ Also report coverage and catalogue diversity so a model is not rewarded for repe
 4. Which dataset does the faculty/team expect, if any?
 
 **Recommended direction:** build and evaluate the ML engine first, keep the player application as a separate integration layer, and submit the working system only after the recommendation pipeline has reproducible evidence.
+
+
+## 14. Implementation delivered in the working branch
+
+The initial research proposal has now been turned into a runnable local-first application in `music-recommendation/`.
+
+Implemented components:
+
+- FastAPI application and SQLite persistence for accounts, tracks, listening events and playlists.
+- Responsive browser-based music player with search, genre browsing, playback controls, likes, playlists, history and model selector.
+- TF-IDF plus cosine content filtering.
+- Implicit-feedback SVD using scikit-learn `TruncatedSVD`.
+- Item-item KNN using cosine neighbours over user-interaction vectors.
+- Popularity baseline and hybrid blending with a cold-start fallback.
+- API-level and recommender unit tests.
+- Chronological top-K evaluation script for Precision@K, Recall@K, NDCG@K, MAP@K and catalogue coverage.
+- Synthetic demo catalogue, synthetic interaction profiles and locally generated short WAV previews.
+- GitHub Actions workflow for tests and model-evaluation smoke checks.
+
+### Deliberate integration choice
+
+The MERN clone candidate was inspected as an application feature reference. Its documented setup requires MongoDB, Clerk identity credentials and Cloudinary media credentials. To keep the coursework reproducible without external service accounts, this branch implements a smaller original player/API rather than importing the candidate's source files. The external repository is not presented as code that was copied or merged.
+
+### Important boundary
+
+The bundled sample data is synthetic and is only for verifying that the full project starts and the recommendation paths execute. It is not a substitute for the academic experiment on a properly licensed real dataset. The team still needs to choose the real evaluation dataset and report metrics from that dataset.
+
+### Run and test
+
+See [music-recommendation/README.md](../music-recommendation/README.md) for environment setup, demo credentials, API endpoints, test commands and model comparison.
