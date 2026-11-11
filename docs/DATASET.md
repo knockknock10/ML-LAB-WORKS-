@@ -70,9 +70,9 @@ The published dataset is made available for non-commercial use and asks users to
 8. Report the number of users, tracks, interactions, sparsity, time range and filters applied.
 9. Keep copyrighted recordings and cover art out of the repository unless the team has documented permission to use them.
 
-## Suggested next research step
+## Next research step
 
-Implement a separate adapter for the chosen real dataset and compare it with the bundled synthetic fixture. Keep the synthetic CSVs as a deterministic smoke-test dataset so tests do not require large downloads or external network access.
+Run the committed Last.fm importer on a local copy of the official listening TSV, document the selected users/tracks/events and filters, and evaluate every algorithm on the same chronological holdout. Keep the synthetic CSVs as deterministic smoke-test data so the test suite does not require large downloads or external network access.
 
 
 ## Import tool
