@@ -3,10 +3,14 @@ from __future__ import annotations
 
 import os
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any
 
 import bcrypt
 import jwt
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 
 JWT_SECRET = os.getenv("JWT_SECRET", "local-development-secret-change-before-deploy")
