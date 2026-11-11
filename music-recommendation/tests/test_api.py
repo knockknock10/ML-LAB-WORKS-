@@ -57,6 +57,13 @@ class ApiTests(unittest.TestCase):
             self.assertGreater(len(response.json()), 0)
             self.assertTrue(all("audio_url" in item for item in response.json()))
 
+    def test_demo_account_uses_its_seeded_svd_profile(self):
+        response = self.client.get(
+            "/api/recommendations/svd", headers=self.headers
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(any(item["components"]["svd"] > 0 for item in response.json()))
+
     def test_search_and_similar_tracks(self):
         search = self.client.get("/api/tracks?q=Neon")
         self.assertEqual(search.status_code, 200)
