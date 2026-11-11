@@ -106,9 +106,14 @@ class HybridMusicRecommender:
             stop_words="english",
             sublinear_tf=True,
         )
-        text_matrix = self.text_vectorizer.fit_transform(text)
+        try:
+            text_matrix = self.text_vectorizer.fit_transform(text)
+        except ValueError:
+            # All metadata fields may be blank in a partially imported catalogue.
+            text_matrix = csr_matrix((len(self.tracks), 0), dtype=float)
 
         numeric_columns = [c for c in NUMERIC_FEATURES if c in self.tracks.columns]
+        numeric_matrix = csr_matrix((len(self.tracks), 0), dtype=float)
         if numeric_columns:
             numeric = self.tracks[numeric_columns].apply(
                 pd.to_numeric, errors="coerce"
@@ -117,11 +122,17 @@ class HybridMusicRecommender:
             numeric_values = scaler.fit_transform(numeric)
             numeric_values = np.clip(numeric_values, -3.0, 3.0)
             numeric_matrix = csr_matrix(numeric_values)
+
+        if text_matrix.shape[1] and numeric_matrix.shape[1]:
             self.content_matrix = hstack(
                 [text_matrix * 0.85, numeric_matrix * 0.15], format="csr"
             )
-        else:
+        elif text_matrix.shape[1]:
             self.content_matrix = text_matrix.tocsr()
+        elif numeric_matrix.shape[1]:
+            self.content_matrix = numeric_matrix
+        else:
+            self.content_matrix = csr_matrix((len(self.tracks), 1), dtype=float)
         self.content_matrix = normalize(self.content_matrix, norm="l2", axis=1)
 
     def _fit_interactions(self) -> None:
@@ -333,6 +344,12 @@ class HybridMusicRecommender:
             raise ValueError(f"Unknown strategy '{strategy}'. Use one of {sorted(allowed)}.")
         limit = max(1, min(int(limit), 50))
         vectors = self._all_score_vectors(str(user_id))
+        user_events = self._events_for_user(str(user_id))
+        has_positive_history = (
+            not user_events.empty
+            and user_events["event_type"].isin(EVENT_WEIGHTS).any()
+        )
+        fallback_to_popularity = False
         if strategy == "hybrid":
             # SVD is unavailable for a cold-start user; the remaining weights
             # are re-normalised rather than treating unavailable CF as zero.
@@ -340,14 +357,24 @@ class HybridMusicRecommender:
             if str(user_id) not in self.user_index or self.svd_model is None:
                 weights = {"content": 0.55, "popularity": 0.45}
             score = sum(vectors[key] * weight for key, weight in weights.items())
+        elif strategy == "svd" and (
+            self.svd_model is None or str(user_id) not in self.user_index
+        ):
+            score = vectors["popularity"]
+            fallback_to_popularity = True
+        elif strategy == "knn" and not has_positive_history:
+            score = vectors["popularity"]
+            fallback_to_popularity = True
+        elif strategy == "content" and not np.any(vectors["content"]):
+            score = vectors["popularity"]
+            fallback_to_popularity = True
         else:
             score = vectors[strategy]
 
         seen = self._seen_track_ids(str(user_id)) if exclude_seen else set()
         ranked = np.argsort(-score, kind="stable")
         results: list[dict[str, Any]] = []
-        user_events = self._events_for_user(str(user_id))
-        has_history = not user_events.empty
+        has_history = has_positive_history
         for idx in ranked:
             track_id = self.track_ids[int(idx)]
             if track_id in seen:
@@ -355,8 +382,8 @@ class HybridMusicRecommender:
             content_score = float(vectors["content"][idx])
             cf_score = float(vectors["svd"][idx])
             pop_score = float(vectors["popularity"][idx])
-            if not has_history:
-                reason = "A popular starting point while we learn your taste"
+            if not has_history or fallback_to_popularity:
+                reason = "Popular starting points while this model learns your listening profile"
             elif strategy in {"content"} or content_score >= cf_score and content_score > 0.2:
                 reason = "Similar genre, mood or sound to tracks in your listening history"
             elif strategy in {"svd", "knn"} or cf_score > 0.1:
