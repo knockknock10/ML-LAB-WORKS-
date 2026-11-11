@@ -13,3 +13,4 @@ models/
 *.pkl
 *.model
 .DS_Store
+data/lastfm_import/
