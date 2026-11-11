@@ -384,9 +384,15 @@ class HybridMusicRecommender:
             pop_score = float(vectors["popularity"][idx])
             if not has_history or fallback_to_popularity:
                 reason = "Popular starting points while this model learns your listening profile"
-            elif strategy in {"content"} or content_score >= cf_score and content_score > 0.2:
+            elif strategy == "content":
                 reason = "Similar genre, mood or sound to tracks in your listening history"
-            elif strategy in {"svd", "knn"} or cf_score > 0.1:
+            elif strategy in {"svd", "knn"}:
+                reason = "Listeners with similar music taste also enjoyed this track"
+            elif strategy == "popularity":
+                reason = "Popular with listeners in this music catalogue"
+            elif content_score >= cf_score and content_score > 0.2:
+                reason = "Similar genre, mood or sound to tracks in your listening history"
+            elif cf_score > 0.1:
                 reason = "Listeners with similar music taste also enjoyed this track"
             else:
                 reason = "Popular with listeners in this music catalogue"
@@ -395,7 +401,7 @@ class HybridMusicRecommender:
                     "track_id": track_id,
                     "score": float(score[idx]),
                     "reason": reason,
-                    "method": strategy,
+                    "method": "popularity-fallback" if fallback_to_popularity else strategy,
                     "components": {
                         "content": content_score,
                         "svd": cf_score,
