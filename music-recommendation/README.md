@@ -201,3 +201,31 @@ The bundled fixture is synthetic. Any metrics obtained from it demonstrate that 
 A MERN Spotify-style application was reviewed as a feature and architecture reference. Its README requires external identity and media services (including Clerk and Cloudinary) in addition to MongoDB. To make this academic project reproducible without account credentials or cloud setup, SoundScout implements a small local-first player and API instead of copying that application's source files. The original repository's licence must be retained if its code is later adopted; the SoundScout implementation does not include copied clone components.
 
 The original lab repository has no project-specific licence visible in the inspected root. Confirm with the repository owner/faculty before choosing a licence for the combined coursework submission.
+
+## Importing real Last.fm 1K interactions
+
+The repository includes a streaming importer for the six-column Last.fm 1K listening file. Obtain the dataset from its official [Zenodo record](https://zenodo.org/records/6090214), extract the archive locally, and review the non-commercial-use terms before use.
+
+Example (the raw file is not committed):
+
+    python scripts/import_lastfm_1k.py /path/to/userid-timestamp-artid-artname-traid-traname.tsv --max-users 150 --max-events 250000 --min-track-plays 2
+
+The importer makes two streaming passes: it selects a reproducible sample of listeners, then reservoir-samples events per selected user so the event limit is not consumed by only the first user groups in the TSV. The output is written to data/lastfm_import/ by default; it does not overwrite the bundled fixtures.
+
+To use the imported interactions in the running app:
+
+1. Stop the server.
+2. Back up data/tracks.csv and data/interactions.csv.
+3. Copy data/lastfm_import/tracks.csv and data/lastfm_import/interactions.csv over those two canonical files.
+4. Delete data/music.db so the database is rebuilt from the new CSVs on next start.
+5. Restart the app and sign in with a new account or use the demo account if you mapped one source user to it.
+
+To map a known source listener to the bundled demo user, pass:
+
+    --demo-source-user-id user_000639
+
+Replace the example ID with a source user ID actually present in the selected data. Otherwise, the demo account will not have the imported listener's collaborative profile.
+
+Last.fm 1K provides listening events and basic artist/track metadata; it does not provide the audio recordings or the numeric audio descriptors used by this application's richer content model. Imported rows therefore use Unknown genre, blank mood/tags, zero numeric descriptors and no audio file. The content model can still use track and artist text; the audio player cannot play an imported recording until you add an audio file that you have the rights to use. Do not download commercial recordings from unofficial sources.
+
+Do not commit the extracted dataset or imported CSVs. The default import output directory is Git-ignored.
