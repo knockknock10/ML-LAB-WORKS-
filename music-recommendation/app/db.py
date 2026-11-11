@@ -183,12 +183,3 @@ def init_db() -> None:
                 """,
                 ("demo", "demo", "demo@example.local", password_hash),
             )
-        elif demo_user["user_id"] != "demo":
-            conn.execute(
-                "UPDATE playlists SET user_id = ? WHERE user_id = ?",
-                ("demo", demo_user["user_id"]),
-            )
-            conn.execute(
-                "UPDATE users SET user_id = ? WHERE user_id = ?",
-                ("demo", demo_user["user_id"]),
-            )
