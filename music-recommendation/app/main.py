@@ -546,6 +546,17 @@ async def upload_track(
     content = await audio.read(MAX_UPLOAD_BYTES + 1)
     if not content or len(content) > MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=413, detail="Audio file must be between 1 byte and 25 MB.")
+    header = content[:16]
+    signatures = {
+        ".wav": len(header) >= 12 and header[:4] == b"RIFF" and header[8:12] == b"WAVE",
+        ".ogg": header.startswith(b"OggS"),
+        ".m4a": len(header) >= 8 and header[4:8] == b"ftyp",
+        ".mp3": header.startswith(b"ID3") or (
+            len(header) >= 2 and header[0] == 0xFF and (header[1] & 0xE0) == 0xE0
+        ),
+    }
+    if not signatures.get(extension, False):
+        raise HTTPException(status_code=415, detail="The uploaded file does not match its audio extension.")
     track_id = f"upload-{uuid.uuid4().hex[:12]}"
     audio_filename = f"{track_id}{extension}"
     destination = AUDIO_DIR / audio_filename
