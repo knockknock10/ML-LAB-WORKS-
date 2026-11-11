@@ -42,8 +42,13 @@ ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".wav", ".ogg", ".m4a"}
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     if os.getenv("APP_ENV", "development").lower() == "production":
-        if JWT_SECRET == "local-development-secret-change-before-deploy":
-            raise RuntimeError("Set a strong JWT_SECRET before running in production.")
+        secret = JWT_SECRET.strip()
+        if (
+            len(secret.encode("utf-8")) < 32
+            or secret == "local-development-secret-change-before-deploy"
+            or "replace-this" in secret.lower()
+        ):
+            raise RuntimeError("Set a strong random JWT_SECRET of at least 32 bytes before running in production.")
     init_db()
     ensure_demo_audio()
     application.state.recommender = None
@@ -202,21 +207,29 @@ def register(payload: RegisterRequest):
     if len(payload.password.encode("utf-8")) > 72:
         raise HTTPException(status_code=422, detail="Password must be at most 72 UTF-8 bytes.")
     user_id = str(uuid.uuid4())
+    username = payload.username.strip().lower()
+    email = payload.email.strip().lower()
     try:
         password_hash = hash_password(payload.password)
         with connection() as conn:
+            duplicate = conn.execute(
+                "SELECT 1 FROM users WHERE username = ? COLLATE NOCASE OR email = ? COLLATE NOCASE",
+                (username, email),
+            ).fetchone()
+            if duplicate is not None:
+                raise HTTPException(status_code=409, detail="That username or email is already registered.")
             conn.execute(
                 """
                 INSERT INTO users (user_id, username, email, password_hash)
                 VALUES (?, ?, ?, ?)
                 """,
-                (user_id, payload.username.strip(), payload.email.strip().lower(), password_hash),
+                (user_id, username, email, password_hash),
             )
     except sqlite3.IntegrityError as exc:
         raise HTTPException(
             status_code=409, detail="That username or email is already registered."
         ) from exc
-    user = {"user_id": user_id, "username": payload.username.strip(), "email": payload.email.strip().lower()}
+    user = {"user_id": user_id, "username": username, "email": email}
     return {"access_token": create_access_token(user_id, user["username"]), "token_type": "bearer", "user": user}
 
 
