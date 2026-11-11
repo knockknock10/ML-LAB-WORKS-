@@ -239,6 +239,10 @@ async function recordEvent(trackId, eventType, duration = 0) {
 
 async function playTrack(track, queue = null) {
   if (!track) return;
+  if (!track.audio_url) {
+    toast("No audio file is available for this track. Add an authorised recording to enable playback.");
+    return;
+  }
   if (state.currentTrack && state.currentTrack.track_id !== track.track_id && !audio.ended) {
     await recordEvent(state.currentTrack.track_id, "skip", audio.currentTime);
   }
