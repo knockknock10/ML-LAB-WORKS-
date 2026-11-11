@@ -73,3 +73,18 @@ The published dataset is made available for non-commercial use and asks users to
 ## Suggested next research step
 
 Implement a separate adapter for the chosen real dataset and compare it with the bundled synthetic fixture. Keep the synthetic CSVs as a deterministic smoke-test dataset so tests do not require large downloads or external network access.
+
+
+## Import tool
+
+The repository includes music-recommendation/scripts/import_lastfm_1k.py. It reads the official six-column TSV in chunks, samples user IDs reproducibly, and reservoir-samples listening events per selected user when an event budget is configured. This avoids a serious sampling bias when the TSV is grouped by listener: selecting the first 250,000 rows would otherwise overrepresent only the first few users.
+
+Default output is data/lastfm_import/tracks.csv and data/lastfm_import/interactions.csv; this directory is ignored by Git. To run:
+
+    python scripts/import_lastfm_1k.py /path/to/userid-timestamp-artid-artname-traid-traname.tsv --max-users 150 --max-events 250000 --min-track-plays 2
+
+For a local application experiment, stop the server, back up the synthetic CSV files, copy the imported CSVs to data/tracks.csv and data/interactions.csv, remove data/music.db, and restart. The app database only seeds catalogue/interactions on first initialization.
+
+The importer maps each Last.fm listen to a play event; it does not invent likes or completed-listen labels. It can optionally map one source user ID to the local demo user ID using --demo-source-user-id. Use only a source ID present in the imported data.
+
+Last.fm 1K contains track/artist identifiers and timestamps, but not audio recordings or the numeric acoustic descriptors used by the demo. Imported tracks therefore have Unknown genre, empty tags and no audio file. Recommendations can use available track/artist text and collaborative listening patterns; actual playback requires audio files the team has permission to use. The dataset is for non-commercial use; cite Last.fm and comply with the terms at the official record.
