@@ -104,10 +104,29 @@ def import_lastfm(
         raise ValueError("No valid user IDs were found in the input TSV.")
 
     ordered_users = sorted(all_users)
+    if demo_source_user_id and demo_source_user_id not in all_users:
+        raise ValueError(
+            "The requested --demo-source-user-id was not found in the input TSV."
+        )
     if max_users and len(ordered_users) > max_users:
-        selected_users = set(rng.sample(ordered_users, max_users))
+        if demo_source_user_id:
+            remaining_users = [user for user in ordered_users if user != demo_source_user_id]
+            sample_count = max(0, max_users - 1)
+            selected_users = {demo_source_user_id, *rng.sample(remaining_users, sample_count)}
+        else:
+            selected_users = set(rng.sample(ordered_users, max_users))
     else:
         selected_users = set(ordered_users)
+
+    if max_events and max_events < len(selected_users):
+        # Keep at least one event per selected user when the event budget is tiny.
+        ordered_selected = sorted(selected_users)
+        if demo_source_user_id:
+            remaining_users = [user for user in ordered_selected if user != demo_source_user_id]
+            sample_count = max(0, max_events - 1)
+            selected_users = {demo_source_user_id, *rng.sample(remaining_users, sample_count)}
+        else:
+            selected_users = set(rng.sample(ordered_selected, max_events))
 
     user_limits: dict[str, int] = {}
     if max_events:
