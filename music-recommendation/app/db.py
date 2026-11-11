@@ -9,9 +9,11 @@ from pathlib import Path
 from typing import Iterator
 
 import bcrypt
+from dotenv import load_dotenv
 
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
+load_dotenv(PROJECT_DIR / ".env")
 DATA_DIR = PROJECT_DIR / "data"
 AUDIO_DIR = DATA_DIR / "audio"
 TRACKS_CSV = DATA_DIR / "tracks.csv"
